@@ -12,7 +12,7 @@ setup(
     install_requires=[
         "btdcore@git+https://github.com/Black-Tusk-Data/btdcore.git@v0.1.8",
         "expert_llm@git+https://github.com/Black-Tusk-Data/expert_llm.git@v0.1.9",
-        "minikg@git+https://github.com/Black-Tusk-Data/minikg.git@v0.2.0",
+        "minikg@git+https://github.com/Black-Tusk-Data/minikg.git@v0.2.1",
         "future",
         "graspologic",
         "networkx",

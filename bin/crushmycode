@@ -19,44 +19,58 @@ parser = argparse.ArgumentParser(
     description="Auto-generate knowledge graphs from codebases",
 )
 
-parser.add_argument("repo_url", type=str, help="""
+parser.add_argument(
+    "repo_url",
+    type=str,
+    help="""
 Local folder path or github URL.
-""")
-parser.add_argument("--input-files", nargs="*", help="""
+""",
+)
+parser.add_argument(
+    "--input-files",
+    nargs="*",
+    help="""
 List of glob expressions that specify which source files should be considered.
-""")
-parser.add_argument("--ignore-files", nargs="*", help="""
+""",
+)
+parser.add_argument(
+    "--ignore-files",
+    nargs="*",
+    help="""
 List of glob expressions that specify which source files should be ignored.
 These are applied only after some 'input_files' expression has matched.
-""")
-parser.add_argument("--show-nodes", action="store_true", help="""
+""",
+)
+parser.add_argument(
+    "--show-nodes",
+    action="store_true",
+    help="""
 Whether or not to include code nodes themselves in the output graph.
 In big repositories this can be very noisy.
-""")
+""",
+)
 
 
 MAX_WORDS_PER_LINE = 10
 
+
 def _format_title(text: str) -> str:
     words = text.split(" ")
     line_words = [
-        words[i:i+MAX_WORDS_PER_LINE]
+        words[i : i + MAX_WORDS_PER_LINE]
         for i in range(0, len(words), MAX_WORDS_PER_LINE)
     ]
-    return "\n".join([
-        " ".join(words)
-        for words in line_words
-    ])
+    return "\n".join([" ".join(words) for words in line_words])
 
 
 def draw_community_tree(
-        *,
-        groups: dict[str, Group],
-        communities: dict[str, Community],
-        com_summaries: dict[str, dict[str, str]],
-        node_details_by_id: dict[str, dict[str, str]],
-        outfile_name: str,
-        include_nodes: bool = False,
+    *,
+    groups: dict[str, Group],
+    communities: dict[str, Community],
+    com_summaries: dict[str, dict[str, str]],
+    node_details_by_id: dict[str, dict[str, str]],
+    outfile_name: str,
+    include_nodes: bool = False,
 ):
     from pyvis.network import Network
 
@@ -72,22 +86,42 @@ def draw_community_tree(
         pass
 
     for community in communities.values():
+        community_title = _format_title(com_summaries[community.id]["purpose"])
+        child_node_blurb = (
+            ""
+            if not community.child_node_ids
+            else "\n".join(
+                [
+                    "Code components:",
+                    *[f" - {node_id}" for node_id in community.child_node_ids],
+                ]
+            )
+        )
         net.add_node(
             community.id,
             label=com_summaries[community.id]["name"],
-            title=_format_title(com_summaries[community.id]["purpose"]),
+            title="\n".join(
+                [
+                    community_title,
+                    child_node_blurb,
+                ]
+            ),
         )
-        if include_nodes:
-            for code_node_id in community.child_node_ids:
-                node_details = node_details_by_id[code_node_id]
-                net.add_node(
-                    code_node_id,
-                    title=_format_title("\n".join([
-                        node_details["entity_type"],
-                        node_details["description"],
-                    ])),
-                )
-                pass
+        if not include_nodes:
+            continue
+        for code_node_id in community.child_node_ids:
+            node_details = node_details_by_id[code_node_id]
+            net.add_node(
+                code_node_id,
+                title=_format_title(
+                    "\n".join(
+                        [
+                            node_details["entity_type"],
+                            node_details["description"],
+                        ]
+                    )
+                ),
+            )
             pass
         pass
 
@@ -114,13 +148,13 @@ def draw_community_tree(
                 child_com_id,
             )
             pass
-        if include_nodes:
-            for child_node_id in community.child_node_ids:
-                net.add_edge(
-                    community.id,
-                    child_node_id,
-                )
-                pass
+        if not include_nodes:
+            continue
+        for child_node_id in community.child_node_ids:
+            net.add_edge(
+                community.id,
+                child_node_id,
+            )
             pass
         pass
 
@@ -136,7 +170,6 @@ def main():
         github_url = local_path
         local_path = ""
         pass
-
 
     api = KgApiCode(
         ignore_file_exps=args.ignore_files or [],
@@ -158,11 +191,14 @@ def main():
         outfile_name=viz_fname,
         include_nodes=args.show_nodes,
     )
-    subprocess.check_call([
-        "open", viz_fname,
-    ])
+    subprocess.check_call(
+        [
+            "open",
+            viz_fname,
+        ]
+    )
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
