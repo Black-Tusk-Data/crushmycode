@@ -1,0 +1,7 @@
+.github/
+*.html
+build
+*.egg-info
+kgcache_*
+lib
+venv
