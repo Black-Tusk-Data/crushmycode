@@ -46,3 +46,9 @@ Other options:
 This is a CLI tool for the [minikg](https://github.com/Black-Tusk-Data/minikg) library.
 
 We explain the knowledge-graph creation process in detail [in this article](https://blacktuskdata.com/code_intelligence.html).
+
+# Random
+
+ - Progress towards building the knowledge graph is heavily cached - you can assess the progress by looking at which steps and which files have been persisted under the cache directory (default `./kgcache_<project_name>`)
+ - Sometimes if there are too many API errors with OpenAI, the worker processes can die and progress will slow to a crawl.  In this case, there is no harm at all in killing the process and restarting.
+ - If for whatever reason you want to execute without multiprocessing enabled, execute the script with the environment variable `DEBUG` set to a non-zero value.

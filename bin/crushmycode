@@ -102,6 +102,7 @@ def draw_community_tree(
             label=com_summaries[community.id]["name"],
             title="\n".join(
                 [
+                    com_summaries[community.id]["name"],
                     community_title,
                     child_node_blurb,
                 ]
