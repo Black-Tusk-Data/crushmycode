@@ -1,4 +1,6 @@
 .github/
+dist/
+
 *.html
 build
 *.egg-info
