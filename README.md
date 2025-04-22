@@ -9,11 +9,11 @@ Let CRUSHMYCODE read it for you instead and give you the gist.
 
 CRUSHMYCODE generates graphs like the following over arbitrary codebases:
 
-## [Maps of code constructs](https://blacktuskdata.com/code-intelligence-node-graph.html)
-[<img src="./images/code-nodes.png" />](https://blacktuskdata.com/code-intelligence-node-graph.html)
+## [Maps of code constructs](https://blacktuskdata.com/code-intelligence-viz1.html)
+[<img src="./images/code-nodes.png" />](https://blacktuskdata.com/code-intelligence-viz1.html)
 
-## [Maps of higher-level concepts](https://blacktuskdata.com/code-intelligence-viz1.html)
-[<img src="./images/code-subsystems.png" />](https://blacktuskdata.com/code-intelligence-viz1.html)
+## [Maps of higher-level concepts](https://blacktuskdata.com/code-intelligence-node-graph.html)
+[<img src="./images/code-subsystems.png" />](https://blacktuskdata.com/code-intelligence-node-graph.html)
 
 
 # Installation
