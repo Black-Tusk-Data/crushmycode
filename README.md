@@ -35,13 +35,25 @@ python -m pip install .
 
  - First, must `export OPENAI_API_KEY=<your API key>`
 
-On a large (~300 file) repository:
+## Building the knowledge graph
 
 ```sh
 crushmycode  https://github.com/google/adk-python --input-files "*.py" --ignore-files "tests/*"
 ```
 
-Other options:
+## Exploring the knowledge graph
+
+```sh
+crushmycode show-graph ./kgcache_adk-python
+```
+
+## Generating a report about the codebase
+
+```sh
+crushmycode report ./kgcache_adk-python
+```
+
+
 
 # Details
 
