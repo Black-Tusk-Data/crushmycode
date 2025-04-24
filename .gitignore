@@ -7,3 +7,5 @@ build
 kgcache_*
 lib
 venv
+
+*.pyc

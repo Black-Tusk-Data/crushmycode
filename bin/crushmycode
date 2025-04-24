@@ -5,199 +5,75 @@ import logging
 import os
 from pathlib import Path
 import subprocess
+from typing import cast
 
 from btdcore.logging import setup_logging
 
 setup_logging()
 
+from crushmycode.cli import (
+    CMCArgsShowGraph,
+    CMCArgsBuild,
+    parse_cli_args,
+)
+from crushmycode.graph_viz import draw_communities_graph
+
 from minikg.presets.code import KgApiCode, subprocess
-from minikg.models import Community, Group
 
 
-parser = argparse.ArgumentParser(
-    prog="Crush My Code",
-    description="Auto-generate knowledge graphs from codebases",
-)
 
-parser.add_argument(
-    "repo_url",
-    type=str,
-    help="""
-Local folder path or github URL.
-""",
-)
-parser.add_argument(
-    "--input-files",
-    nargs="*",
-    help="""
-List of glob expressions that specify which source files should be considered.
-""",
-)
-parser.add_argument(
-    "--ignore-files",
-    nargs="*",
-    help="""
-List of glob expressions that specify which source files should be ignored.
-These are applied only after some 'input_files' expression has matched.
-""",
-)
-parser.add_argument(
-    "--show-nodes",
-    action="store_true",
-    help="""
-Whether or not to include code nodes themselves in the output graph.
-In big repositories this can be very noisy.
-""",
-)
+def main() -> None:
+    args = parse_cli_args()
+    command = args.__class__.get_command_name()
+    print("command", command)
+    print("args", args)
 
-
-MAX_WORDS_PER_LINE = 10
-
-
-def _format_title(text: str) -> str:
-    words = text.split(" ")
-    line_words = [
-        words[i : i + MAX_WORDS_PER_LINE]
-        for i in range(0, len(words), MAX_WORDS_PER_LINE)
-    ]
-    return "\n".join([" ".join(words) for words in line_words])
-
-
-def draw_community_tree(
-    *,
-    groups: dict[str, Group],
-    communities: dict[str, Community],
-    com_summaries: dict[str, dict[str, str]],
-    node_details_by_id: dict[str, dict[str, str]],
-    outfile_name: str,
-    include_nodes: bool = False,
-):
-    from pyvis.network import Network
-
-    net = Network()
-
-    # NODES
-    for group in groups.values():
-        net.add_node(
-            group.group_id,
-            label=group.summary["name"],
-            title=_format_title(group.summary["purpose"]),
+    if command == "build":
+        args = cast(CMCArgsBuild, args)
+        local_path = args.repo_url
+        github_url = ""
+        if not Path(local_path).exists():
+            github_url = local_path
+            local_path = ""
+            pass
+        kgapi = KgApiCode()
+        kgapi.build_kg(
+            ignore_file_exps=args.ignore_files,
+            input_file_exps=args.input_files,
+            github_url=github_url,
+            local_dir=local_path,
         )
-        pass
+        return
 
-    for community in communities.values():
-        community_title = _format_title(com_summaries[community.id]["purpose"])
-        child_node_blurb = (
-            ""
-            if not community.child_node_ids
-            else "\n".join(
-                [
-                    "Code components:",
-                    *[f" - {node_id}" for node_id in community.child_node_ids],
-                ]
-            )
+    if command == "show-graph":
+        args = cast(CMCArgsShowGraph, args)
+        if not Path(args.cache_path).exists():
+            raise Exception(f"cache path '{args.cache_path}' does not exist")
+        kgapi = KgApiCode()
+        pkg = kgapi.load_kg_package(
+            cache_dir=args.cache_path
         )
-        net.add_node(
-            community.id,
-            label=com_summaries[community.id]["name"],
-            title="\n".join(
-                [
-                    com_summaries[community.id]["name"],
-                    community_title,
-                    child_node_blurb,
-                ]
-            ),
+        viz_fname = "".join([
+            os.path.split(args.cache_path)[-1],
+            ".html",
+        ])
+        logging.info("drawing code graph to '%s'", viz_fname)
+        draw_communities_graph(
+            groups=pkg.cluster_groups,
+            communities=pkg.communities,
+            com_summaries=pkg.summaries_by_id,
+            node_details_by_id=dict(pkg.G.nodes),
+            outfile_name=viz_fname,
+            include_nodes=args.show_nodes,
         )
-        if not include_nodes:
-            continue
-        for code_node_id in community.child_node_ids:
-            node_details = node_details_by_id[code_node_id]
-            net.add_node(
-                code_node_id,
-                title=_format_title(
-                    "\n".join(
-                        [
-                            node_details["entity_type"],
-                            node_details["description"],
-                        ]
-                    )
-                ),
-            )
-            pass
-        pass
+        subprocess.call(
+            [
+                "open",
+                viz_fname,
+            ]
+        )
+        return
 
-    # EDGES
-    for group in groups.values():
-        for child_group_id in group.child_group_ids:
-            net.add_edge(
-                group.group_id,
-                child_group_id,
-            )
-            pass
-        for child_com_id in group.child_community_ids:
-            net.add_edge(
-                group.group_id,
-                child_com_id,
-            )
-            pass
-        pass
-
-    for community in communities.values():
-        for child_com_id in community.child_community_ids:
-            net.add_edge(
-                community.id,
-                child_com_id,
-            )
-            pass
-        if not include_nodes:
-            continue
-        for child_node_id in community.child_node_ids:
-            net.add_edge(
-                community.id,
-                child_node_id,
-            )
-            pass
-        pass
-
-    net.show(outfile_name, notebook=False)
-    pass
-
-
-def main():
-    args = parser.parse_args()
-    local_path = args.repo_url
-    github_url = ""
-    if not Path(local_path).exists():
-        github_url = local_path
-        local_path = ""
-        pass
-
-    api = KgApiCode(
-        ignore_file_exps=args.ignore_files or [],
-        input_file_exps=args.input_files or ["*"],
-        github_url=github_url,
-        local_dir=local_path,
-    )
-    viz_fname = f"{api.project_name}.html"
-
-    api.minikgapi.build_kg()
-    pkg = api.minikgapi._load_package()
-
-    logging.info("drawing code graph to '%s'", viz_fname)
-    draw_community_tree(
-        groups=pkg.cluster_groups,
-        communities=pkg.communities,
-        com_summaries=pkg.summaries_by_id,
-        node_details_by_id=dict(pkg.G.nodes),
-        outfile_name=viz_fname,
-        include_nodes=args.show_nodes,
-    )
-    subprocess.check_call(
-        [
-            "open",
-            viz_fname,
-        ]
-    )
     return
 
 
