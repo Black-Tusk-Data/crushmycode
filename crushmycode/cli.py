@@ -87,10 +87,28 @@ class CMCArgsShowGraph(CMCArgs):
     pass
 
 
+class CMCArgsGenerateReport(CMCArgs):
+    @staticmethod
+    def get_command_name() -> str:
+        return "report"
+
+    cache_path: str = Field(
+        cli_kwargs={
+            "type": str,
+            "help": """
+            Path to the directory created during the 'build' step.
+            """,
+        },
+    )
+
+    pass
+
+
 sub_commands = {
     args.get_command_name(): args
     for args in [
         CMCArgsBuild,
+        CMCArgsGenerateReport,
         CMCArgsShowGraph,
     ]
 }

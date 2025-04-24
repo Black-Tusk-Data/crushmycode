@@ -8,6 +8,7 @@ import subprocess
 from typing import cast
 
 from btdcore.logging import setup_logging
+from minikg.models import MiniKgConfig
 
 setup_logging()
 
@@ -16,6 +17,7 @@ from crushmycode.cli import (
     CMCArgsBuild,
     parse_cli_args,
 )
+from crushmycode.codereport import CodeReportBuilder
 from crushmycode.graph_viz import draw_communities_graph
 
 from minikg.presets.code import KgApiCode, subprocess
@@ -25,8 +27,6 @@ from minikg.presets.code import KgApiCode, subprocess
 def main() -> None:
     args = parse_cli_args()
     command = args.__class__.get_command_name()
-    print("command", command)
-    print("args", args)
 
     if command == "build":
         args = cast(CMCArgsBuild, args)
@@ -37,12 +37,15 @@ def main() -> None:
             local_path = ""
             pass
         kgapi = KgApiCode()
-        kgapi.build_kg(
+        minikgconfig: MiniKgConfig = kgapi.build_kg(
             ignore_file_exps=args.ignore_files,
             input_file_exps=args.input_files,
             github_url=github_url,
             local_dir=local_path,
         )
+        with open(minikgconfig.persist_dir / "code-path.txt", "w") as f:
+            f.write(str(minikgconfig.input_dir))
+            pass
         return
 
     if command == "show-graph":
@@ -72,6 +75,33 @@ def main() -> None:
                 viz_fname,
             ]
         )
+        return
+
+    if command == "report":
+        args = cast(CMCArgsShowGraph, args)
+        if not Path(args.cache_path).exists():
+            raise Exception(f"cache path '{args.cache_path}' does not exist")
+        code_path: str
+        with open(Path(args.cache_path) / "code-path.txt", "r") as f:
+            code_path = f.read().strip()
+            pass
+        kgapi = KgApiCode()
+        pkg = kgapi.load_kg_package(
+            cache_dir=args.cache_path
+        )
+        report_fname = "".join([
+            os.path.split(args.cache_path)[-1],
+            ".md",
+        ])
+        report_builder = CodeReportBuilder(
+            code_base_path=code_path,
+            pkg=pkg,
+        )
+        report = report_builder.build_report()
+        logging.info("writing report to '%s'", report_fname)
+        with open(report_fname, "w") as f:
+            f.write(report)
+            pass
         return
 
     return
